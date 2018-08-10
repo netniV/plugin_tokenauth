@@ -65,25 +65,27 @@ function plugin_tokenauth_config_arrays() {
 			'method'        => 'checkbox',
 		),
 		'user' => array(
+			'method'        => 'drop_sql',
 			'friendly_name' => __('Username'),
 			'description'   => __('The user that this Token Authentication is associated to.', 'tokenauth'),
 			'value'         => '|arg1:user|',
-			'method'        => 'drop_sql',
 			'sql'           => 'SELECT id, username AS name FROM user_auth ORDER BY name',
 			'default'       => '0',
 		),
 		'salt' => array(
+			'method'        => 'textbox',
 			'friendly_name' => __('Salt', 'tokenauth'),
 			'description'   => __('The string that is combined with the user data to verify a signed code'),
 			'value'         => '|arg1:salt|',
-			'method'        => 'textbox',
+			'max_length'    => '80',
+			'size'          => '80',
 			'default'       => '',
 		),
 		'token' => array(
+			'method'        => 'textarea',
 			'friendly_name' => __('Token', 'tokenauth'),
 			'description'   => __('The public RSA token that is used to verify the signed code'),
 			'value'         => '|arg1:token|',
-			'method'        => 'textarea',
                         'textarea_cols' => '80',
 			'textarea_rows' => '5',
 		),
@@ -104,10 +106,10 @@ function plugin_tokenauth_setup_table() {
 	$data['columns'][] = array('name' => 'salt', 'type' => 'varchar(80)', 'NULL' => false, 'default' => '');
 
 	$data['keys'][] = array('name' => 'user', 'columns' => 'user');
-	$data['keys'][] = array('name' => 'user_enabled', 'columns' => 'user, enabled');
+	$data['keys'][] = array('name' => 'user_enabled', 'columns' => 'user`, `enabled');
 	$data['keys'][] = array('name' => 'enabled', 'columns' => 'enabled');
 
-	api_plugin_db_table_create ('tokenauth', 'plugin_tokenauth', $data);
+	api_plugin_db_table_create('tokenauth', 'plugin_tokenauth', $data);
 }
 
 function plugin_tokenauth_auth_alternate_realms() {
@@ -139,12 +141,16 @@ function plugin_tokenauth_auth_alternate_realms() {
 
 		$db_data = db_fetch_row_prepared($sql, array($user_id));
 		if ($db_data !== false) {
-			require_once($config['include_dir'] . '/vendor/phpseclib/Crypt/RSA.php');
-			$rsa = new Crypt_RSA();
-			$rsa->loadKey($db_data['token']);
+			include_once($config['include_path'] . '/vendor/phpseclib/Math/BigInteger.php');
+			include_once($config['include_path'] . '/vendor/phpseclib/Crypt/Random.php');
+			include_once($config['include_path'] . '/vendor/phpseclib/Crypt/Hash.php');
+			include_once($config['include_path'] . '/vendor/phpseclib/Crypt/RSA.php');
 
-			if ($rsa->verify(date('Ymd') . $db_data['salt'] . $user_id, $user_token)) {
-				$_SESSION['sess_user_id'] = $user_id;
+			$rsa = new \phpseclib\Crypt\RSA();
+			if ($rsa->loadKey($db_data['token'])) {
+				if ($rsa->verify(date('Ymd') . $db_data['salt'] . $user_id, $user_token)) {
+					$_SESSION['sess_user_id'] = $user_id;
+				}
 			}
 		}
 	}
