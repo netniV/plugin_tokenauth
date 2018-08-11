@@ -31,6 +31,38 @@ userid | 325 | This is the user id of the user within cacti
 
 Note, both the user and the Token Authentication **must** be enabled in order to for the authentication to pass.
 
+## Generating Keys
+When editing the Token Authentication, there is an option to generate keys in 1024-bit, 2048-bit and 4096-bit formats.  When using these functions to generate a new key, rather than using your own pre-existing one, you MUST make sure that you copy the private key for later usage.
+
+Without the private key, you will NOT be able to sign and verify the above text.
+
+## Example PHP script
+The following is an example of a PHP script that will generate a signed token to be passd to cacti, using the Token Auth authentication system variables
+
+This example assumes that you have the following:
+- phpseclib copied into a subfolder
+- loaded the private key into $key
+- loaded the public key into Token of the tokenauth record
+- loaded the salt into $salt and Salt of the tokenauth record
+- primed the TokenAuth ID in $id
+
+```php
+include_once('phpseclib/Math/BigInteger.php');
+include_once('phpseclib/Crypt/Random.php');
+include_once('phpseclib/Crypt/Hash.php');
+include_once('phpseclib/Crypt/RSA.php');
+$rsa = new \phpseclib\Crypt\RSA();
+$rsa->setHash('sha256');
+$rsa->loadKey($key);
+
+$package = date('Ymd') . $salt . $id;
+$original = $rsa->sign($package);
+$base64 = base64_encode($original);
+$signature = urlencode($base64);
+echo "$package = " . $base64. "\n";
+echo "http://cacti/?tokenauth_id=$id&tokenauth_token=$signature";
+```
+
 ## Releases
 
 --- 0.0.1 ---

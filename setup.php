@@ -115,43 +115,64 @@ function plugin_tokenauth_setup_table() {
 function plugin_tokenauth_auth_alternate_realms() {
 	global $config;
 
-	$filters = array(
-		'tokenauth_userid' => array(
-			'filter' => FILTER_VALIDATE_INT,
-			'default' => '0',
-			),
-		'tokenauth_token' => array(
-			'filter' => FILTER_CALLBACK,
-			'default' => '',
-			'options' => array('options' => 'plugin_tokenauth_sanitize_auth_token')
-			)
-	);
+	if (!isset($_SESSION['sess_user_id'])) {
+		cacti_log('plugin_tokenauth: No user session found');
+		$filters = array(
+			'tokenauth_id' => array(
+				'filter' => FILTER_VALIDATE_INT,
+				'default' => '0',
+				),
+			'tokenauth_token' => array(
+				'filter' => FILTER_CALLBACK,
+				'default' => '',
+				'options' => array('options' => 'plugin_tokenauth_sanitize_auth_token')
+				)
+		);
 
-	validate_store_request_vars($filters);
+		validate_store_request_vars($filters);
 
-	$user_id    = get_request_var('tokenauth_userid');
-	$user_token = get_request_var('tokenauth_token');
+		$auth_id    = get_request_var('tokenauth_id');
+		$auth_token = get_request_var('tokenauth_token');
 
-	if ($user_id > 0) {
-		$sql = "SELECT ta.*
-			FROM plugin_tokenauth ta
-			INNER JOIN ua
-			ON ua.id = ta.user AND ua.enabled = 'on'
-			WHERE ta.user = ? and ta.enabled = 'on'";
+		if ($auth_id > 0) {
+			$sql = "SELECT ta.*, ua.username
+				FROM plugin_tokenauth ta
+				INNER JOIN user_auth ua ON ua.id = ta.user AND ua.enabled = 'on'
+				WHERE ta.id = ? and ta.enabled = 'on'";
 
-		$db_data = db_fetch_row_prepared($sql, array($user_id));
-		if ($db_data !== false) {
-			include_once($config['include_path'] . '/vendor/phpseclib/Math/BigInteger.php');
-			include_once($config['include_path'] . '/vendor/phpseclib/Crypt/Random.php');
-			include_once($config['include_path'] . '/vendor/phpseclib/Crypt/Hash.php');
-			include_once($config['include_path'] . '/vendor/phpseclib/Crypt/RSA.php');
+			$auth_base64 = str_replace(' ', '+', $auth_token);
+			$auth_token = base64_decode($auth_base64, true);
 
-			$rsa = new \phpseclib\Crypt\RSA();
-			if ($rsa->loadKey($db_data['token'])) {
-				if ($rsa->verify(date('Ymd') . $db_data['salt'] . $user_id, base64_decode($user_token))) {
-					$_SESSION['sess_user_id'] = $user_id;
+			if ($auth_token === false) {
+				cacti_log('plugin_tokenauth: Failed to decode supplied auth token');
+			} else {
+				$db_data = db_fetch_row_prepared($sql, array($auth_id));
+				if ($db_data !== false && sizeof($db_data)) {
+
+					$package = date('Ymd') . $db_data['salt'] . $auth_id;
+
+					include_once($config['include_path'] . '/vendor/phpseclib/Math/BigInteger.php');
+					include_once($config['include_path'] . '/vendor/phpseclib/Crypt/Random.php');
+					include_once($config['include_path'] . '/vendor/phpseclib/Crypt/Hash.php');
+					include_once($config['include_path'] . '/vendor/phpseclib/Crypt/RSA.php');
+
+					$rsa = new \phpseclib\Crypt\RSA();
+					$rsa->setHash('sha256');
+					if ($rsa->loadKey($db_data['token'])) {
+						$verify_result = $rsa->verify($package, $auth_token);
+						if ($verify_result !== false) {
+							cacti_log('LOGIN: Authenticated user \'' . $db_data['username'] .
+								'\' (' . $db_data['user'] .') using tokenauth ' . $db_data['id']);
+							$_SESSION['sess_user_id'] = $db_data['user'];
+						}
+					}
 				}
 			}
 		}
 	}
+}
+
+function plugin_tokenauth_sanitize_auth_token($string) {
+	$decoded = base64_decode($string);
+	return $decoded === false ? '' : $string;
 }
