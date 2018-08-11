@@ -15,7 +15,7 @@ After you have completed that, you should goto 'Token Auth' on the Console Menu 
 
 In order to utilise the token authentication, you will need to supply a userid and a token as part of the url:
 
-https://<cacti>/graph_view.php?tokenauth_userid=<userid>&tokenauth_token=<token>
+`https://<cacti>/graph_view.php?tokenauth_userid=<userid>&tokenauth_token=<token>`
 
 The token should be the signed token generated using the private RSA token that corresponds to the public token setup within Cacti.
 
