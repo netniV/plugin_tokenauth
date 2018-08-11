@@ -42,6 +42,9 @@ switch (get_request_var('action')) {
 	case 'actions':
 		form_actions();
 		break;
+	case 'generate_keys':
+		tokenauth_generate_keys();
+		break;
 	case 'edit':
 		top_header();
 		tokenauth_edit();
@@ -138,6 +141,30 @@ function form_save() {
 	}
 }
 
+function tokenauth_generate_keys() {
+	global $config;
+
+	include_once($config['include_path'] . '/vendor/phpseclib/Math/BigInteger.php');
+	include_once($config['include_path'] . '/vendor/phpseclib/Crypt/Random.php');
+	include_once($config['include_path'] . '/vendor/phpseclib/Crypt/Hash.php');
+	include_once($config['include_path'] . '/vendor/phpseclib/Crypt/RSA.php');
+
+	$rsa = new \phpseclib\Crypt\RSA();
+	$rsa->setPublicKeyFormat(phpseclib\Crypt\RSA::PUBLIC_FORMAT_OPENSSH);
+	$rsa->setHash('sha256');
+
+	$keys = $rsa->createKey(2048);
+	if ($keys === false) {
+		$returnValues = array('private' => '', 'public' => '');
+	} else {
+		$returnValues = array('private' => $keys['privatekey'], 'public' => $keys['publickey']);
+	}
+
+	header('Content-Type: application/json');
+	$json = json_encode($returnValues);
+	header('Content-Length: ' . strlen($json));
+	print $json;
+}
 
 function tokenauth_enable($selected_items, $enabled = false) {
 	if (!empty($selected_items)) {
@@ -169,6 +196,7 @@ function tokenauth_edit() {
 	$id = get_filter_request_var('id');
 	/* ==================================================== */
 
+	$token = array();
 	if (!isempty_request_var('id')) {
 		$sql_token = "SELECT ta.id, ta.salt, ta.token, ta.user,
 			      if (ua.username is null, CONCAT('Missing User ID: ',ta.user), ua.username) as username
@@ -192,12 +220,49 @@ function tokenauth_edit() {
 			'fields' => inject_form_variables($fields_tokenauth, $token),
 		)
 	);
+?>
+	<div id='private_key_div' class='formRow even-alternate' style='display:none'>
+		<div class='formColumnLeft'>
+			<div class='formFieldName'>
+				Private Key
+			</div>
+		</div>
+		<div class='formColumnRight'>
+			<div class='formData'>
+<?php
+	form_text_area('private_key', '', '8','40', '');
+?>
+			</div>
+		</div>
+	</div>
+<?php
 	html_end_box();
 
 	form_hidden_box('id', (isset($token['id']) ? $token['id'] : '0'), '');
 	form_hidden_box('save_component', '1', '');
 
+	form_save_buttons(array(
+		array('id' => 'generate_keys', 'value' => __('Generate Keys')),
+	));
 	form_save_button('user_admin.php', 'return');
+?>
+	<script type='text/javascript'>
+	$('#generate_keys').click(function() {
+		debugger;
+		$.get('user_admin.php?action=generate_keys').done(function(data) {
+			debugger;
+			if (data.private > '') {
+				$('#private_key').val(data.private);
+				$('#private_key_div').show();
+				$('#token').val(data.public);
+			}
+		})
+		.fail(function(data) {
+			getPresentHTTPError(data);
+		})
+	});
+	</script>
+<?php
 }
 
 function tokenauth_listview() {
