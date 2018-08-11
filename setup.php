@@ -148,7 +148,7 @@ function plugin_tokenauth_auth_alternate_realms() {
 
 			$rsa = new \phpseclib\Crypt\RSA();
 			if ($rsa->loadKey($db_data['token'])) {
-				if ($rsa->verify(date('Ymd') . $db_data['salt'] . $user_id, $user_token)) {
+				if ($rsa->verify(date('Ymd') . $db_data['salt'] . $user_id, base64_decode($user_token))) {
 					$_SESSION['sess_user_id'] = $user_id;
 				}
 			}

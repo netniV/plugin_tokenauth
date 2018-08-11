@@ -36,15 +36,14 @@ $tokenauth_actions = array(
 set_default_action();
 
 switch (get_request_var('action')) {
-	case 'save':
-		form_save();
-		break;
 	case 'actions':
 		form_actions();
 		break;
 	case 'generate_keys':
 		tokenauth_generate_keys();
 		break;
+	case 'save':
+		form_save();
 	case 'edit':
 		top_header();
 		tokenauth_edit();
@@ -124,6 +123,7 @@ function form_save() {
 			$rsa = new \phpseclib\Crypt\RSA();
 			if (!$rsa->loadKey($save['token'])) {
 				$save['token'] = '';
+				display_custom_error_message('Specified token was not a valid RSA token');
 			}
 		}
 
@@ -134,15 +134,17 @@ function form_save() {
 			} else {
 				raise_message(2);
 			}
-		}
 
-		header('Location: user_admin.php?header=false');
-		exit;
+			header('Location: user_admin.php?header=false');
+			exit;
+		}
 	}
 }
 
 function tokenauth_generate_keys() {
 	global $config;
+
+	get_filter_request_var('length');
 
 	include_once($config['include_path'] . '/vendor/phpseclib/Math/BigInteger.php');
 	include_once($config['include_path'] . '/vendor/phpseclib/Crypt/Random.php');
@@ -150,10 +152,10 @@ function tokenauth_generate_keys() {
 	include_once($config['include_path'] . '/vendor/phpseclib/Crypt/RSA.php');
 
 	$rsa = new \phpseclib\Crypt\RSA();
-	$rsa->setPublicKeyFormat(phpseclib\Crypt\RSA::PUBLIC_FORMAT_OPENSSH);
+	//$rsa->setPublicKeyFormat(phpseclib\Crypt\RSA::PUBLIC_FORMAT_OPENSSH);
 	$rsa->setHash('sha256');
 
-	$keys = $rsa->createKey(2048);
+	$keys = $rsa->createKey(get_request_var('length'));
 	if ($keys === false) {
 		$returnValues = array('private' => '', 'public' => '');
 	} else {
@@ -224,7 +226,7 @@ function tokenauth_edit() {
 	<div id='private_key_div' class='formRow even-alternate' style='display:none'>
 		<div class='formColumnLeft'>
 			<div class='formFieldName'>
-				Private Key
+				Private Key (this is not kept, so copy it!)
 			</div>
 		</div>
 		<div class='formColumnRight'>
@@ -241,25 +243,36 @@ function tokenauth_edit() {
 	form_hidden_box('id', (isset($token['id']) ? $token['id'] : '0'), '');
 	form_hidden_box('save_component', '1', '');
 
-	form_save_buttons(array(
-		array('id' => 'generate_keys', 'value' => __('Generate Keys')),
-	));
 	form_save_button('user_admin.php', 'return');
 ?>
 	<script type='text/javascript'>
-	$('#generate_keys').click(function() {
-		debugger;
-		$.get('user_admin.php?action=generate_keys').done(function(data) {
-			debugger;
-			if (data.private > '') {
-				$('#private_key').val(data.private);
-				$('#private_key_div').show();
-				$('#token').val(data.public);
-			}
-		})
-		.fail(function(data) {
-			getPresentHTTPError(data);
-		})
+	$(function() {
+		field = $('#row_token > .formColumnLeft > .formFieldName');
+		html = field.html();
+		html += "<br><input typ='button' class='ui-button ui-corner-all ui-widget' id='generate_keys_1024' value='<?php print __('Generate');?> 1024' />";
+		html += "<br><input typ='button' class='ui-button ui-corner-all ui-widget' id='generate_keys_2048' value='<?php print __('Generate');?> 2048' />";
+		html += "<br><input typ='button' class='ui-button ui-corner-all ui-widget' id='generate_keys_4096' value='<?php print __('Generate');?> 4096' />";
+		field.html(html);
+
+		generate_keys = $('[id^="generate_keys_"]');
+		generate_keys.button();
+		generate_keys.on('click',function() {
+			generate_keys.button( "option", "disabled", true );;
+			id = this.id.replace('generate_keys_','');
+
+			$.get('user_admin.php?action=generate_keys&length=' + id).done(function(data) {
+				if (data.private > '') {
+					$('#private_key').val(data.private);
+					$('#private_key_div').show();
+					$('#token').val(data.public);
+				}
+
+				generate_keys.button( "option", "disabled", false );;
+			})
+			.fail(function(data) {
+				getPresentHTTPError(data);
+			})
+		});
 	});
 	</script>
 <?php
