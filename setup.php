@@ -103,7 +103,7 @@ function plugin_tokenauth_setup_table() {
 	$data['columns'][] = array('name' => 'id', 'type' => 'int(11)', 'NULL' => false, 'auto_increment' => true);
 	$data['columns'][] = array('name' => 'user', 'type' => 'int(11)', 'NULL' => false, 'default' => '0');
 	$data['columns'][] = array('name' => 'enabled', 'type' => 'char(2)', 'NULL' => false, 'default' => '');
-	$data['columns'][] = array('name' => 'token', 'type' => 'varchar(300)', 'NULL' => false, 'default' => '');
+	$data['columns'][] = array('name' => 'token', 'type' => 'varchar(1000)', 'NULL' => false, 'default' => '');
 	$data['columns'][] = array('name' => 'salt', 'type' => 'varchar(80)', 'NULL' => false, 'default' => '');
 
 	$data['keys'][] = array('name' => 'user', 'columns' => 'user');
