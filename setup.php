@@ -85,9 +85,10 @@ function plugin_tokenauth_config_arrays() {
 			'method'        => 'textarea',
 			'friendly_name' => __('Token', 'tokenauth'),
 			'description'   => __('The public RSA token that is used to verify the signed code'),
+			'class'		=> 'monoSpace',
 			'value'         => '|arg1:token|',
-                        'textarea_cols' => '80',
-			'textarea_rows' => '5',
+                        'textarea_cols' => '120',
+			'textarea_rows' => '20',
 		),
 	);
 

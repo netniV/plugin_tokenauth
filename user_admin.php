@@ -211,7 +211,15 @@ function tokenauth_edit() {
 	} else {
 	        $header_label = __('Token Authentication [new]', 'tokenauth');
 	}
-
+?>
+	<style>
+		textarea {
+			width: 500px;
+			height: auto;
+			font-family: monospace;
+		}
+	</style>
+<?php
 	form_start('user_admin.php', 'tokenauth');
 
 	html_start_box(htmlspecialchars($header_label), '100%', '', '3', 'center', '');
