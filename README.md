@@ -37,11 +37,25 @@ The text that should be signed is made up of the following:
 <date><salt><userid>
 ```
 
-field | example | description
---- | --- | ---
-date | 20180818 | This is the reverse date in the format of 4 digit year, 2 digit month, 2 digit day
-salt | mysaltfield | This is the salt that was setup with against the Token Authentication in Cacti
-userid | 325 | This is the user id of the user within cacti
+### Field: date
+
+**Example:** 20180810
+
+This is the reverse date in the format of 4 digit year, 2 digit month, 2 digit
+day.  The date is important as the token is only valid for that date, once the
+day has changed, the backend code will not be able to verify the token.
+
+### Field: salt
+
+**Example:** mysaltfield
+
+his is the salt that was assigned when creating the Token Authentication data in
+Cacti for the specific user.  Each user should have their own salt to make it
+harder to brute force the tokenauth system.
+
+### Field: userid
+
+This is the user id of the user within cacti
 
 Note, both the user and the Token Authentication **must** be enabled in order to
 for the authentication to pass.
@@ -90,6 +104,10 @@ echo "http://cacti/?tokenauth_id=$id&tokenauth_token=$signature";
 ```
 
 ## Releases
+
+--- develop ---
+
+* issue#4: Logging should use appropriate filtering levels
 
 --- 0.0.2 ---
 

@@ -117,7 +117,7 @@ function plugin_tokenauth_auth_alternate_realms() {
 	global $config;
 
 	if (!isset($_SESSION['sess_user_id'])) {
-		cacti_log('plugin_tokenauth: No user session found');
+		cacti_log('No user session found',false,'TOKENAUTH',POLLER_VERBOSITY_HIGH);
 		$filters = array(
 			'tokenauth_id' => array(
 				'filter' => FILTER_VALIDATE_INT,
@@ -145,7 +145,7 @@ function plugin_tokenauth_auth_alternate_realms() {
 			$auth_token = base64_decode($auth_base64, true);
 
 			if ($auth_token === false) {
-				cacti_log('plugin_tokenauth: Failed to decode supplied auth token');
+				cacti_log('Failed to decode supplied auth token for auth id ' . $auth_id,false,'TOKENAUTH',POLLER_VERBOSITY_MEDIUM);
 			} else {
 				$db_data = db_fetch_row_prepared($sql, array($auth_id));
 				if ($db_data !== false && sizeof($db_data)) {
@@ -163,10 +163,16 @@ function plugin_tokenauth_auth_alternate_realms() {
 						$verify_result = $rsa->verify($package, $auth_token);
 						if ($verify_result !== false) {
 							cacti_log('LOGIN: Authenticated user \'' . $db_data['username'] .
-								'\' (' . $db_data['user'] .') using tokenauth ' . $db_data['id']);
+								'\' (' . $db_data['user'] .') using tokenauth ' . $db_data['id'], false, 'TOKENAUTH');
 							$_SESSION['sess_user_id'] = $db_data['user'];
+						} else {
+							cacti_log('Failed to verify token for auth id ' . $auth_id,false,'TOKENAUTH', POLLER_VERBOSITY_DEBUG);
 						}
+					} else {
+						cacti_log('Failed to load key for auth id ' . $auth_id,false,'TOKENAUTH', POLLER_VERBOSITY_DEBUG);
 					}
+				} else {
+					cacti_log('Failed to find auth id ' . $auth_id,false,'TOKENAUTH', POLLER_VERBOSITY_DEBUG);
 				}
 			}
 		}
