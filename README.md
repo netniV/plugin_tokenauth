@@ -49,8 +49,8 @@ day has changed, the backend code will not be able to verify the token.
 
 **Example:** mysaltfield
 
-his is the salt that was assigned when creating the Token Authentication data in
-Cacti for the specific user.  Each user should have their own salt to make it
+This is the salt that was assigned when creating the Token Authentication data
+in Cacti for the specific user.  Each user should have their own salt to make it
 harder to brute force the tokenauth system.
 
 ### Field: userid
