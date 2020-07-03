@@ -85,9 +85,9 @@ function plugin_tokenauth_config_arrays() {
 			'method'        => 'textarea',
 			'friendly_name' => __('Token', 'tokenauth'),
 			'description'   => __('The public RSA token that is used to verify the signed code'),
-			'class'		=> 'monoSpace',
+			'class'         => 'monoSpace',
 			'value'         => '|arg1:token|',
-                        'textarea_cols' => '120',
+			'textarea_cols' => '120',
 			'textarea_rows' => '20',
 		),
 	);
@@ -114,10 +114,12 @@ function plugin_tokenauth_setup_table() {
 }
 
 function plugin_tokenauth_auth_alternate_realms() {
-	global $config;
+	global $config, $tokenauth_status;
 
+	$tokenauth_status = plugin_tokenauth_default_status();
+	$tokenauth_status['Message'] = 'Started';
 	if (!isset($_SESSION['sess_user_id'])) {
-		cacti_log('No user session found',false,'TOKENAUTH',POLLER_VERBOSITY_HIGH);
+		cacti_log('No user session found',false,'TOKENAUTH',POLLER_VERBOSITY_DEBUG);
 		$filters = array(
 			'tokenauth_id' => array(
 				'filter' => FILTER_VALIDATE_INT,
@@ -135,6 +137,8 @@ function plugin_tokenauth_auth_alternate_realms() {
 		$auth_id    = get_request_var('tokenauth_id');
 		$auth_token = get_request_var('tokenauth_token');
 
+		$tokenauth_status['Authenticated'] = false;
+
 		if ($auth_id > 0) {
 			$sql = "SELECT ta.*, ua.username
 				FROM plugin_tokenauth ta
@@ -146,6 +150,7 @@ function plugin_tokenauth_auth_alternate_realms() {
 
 			if ($auth_token === false) {
 				cacti_log('Failed to decode supplied auth token for auth id ' . $auth_id,false,'TOKENAUTH',POLLER_VERBOSITY_MEDIUM);
+				$tokenauth_status['Message'] = 'Bad token';
 			} else {
 				$db_data = db_fetch_row_prepared($sql, array($auth_id));
 				if ($db_data !== false && sizeof($db_data)) {
@@ -165,14 +170,22 @@ function plugin_tokenauth_auth_alternate_realms() {
 							cacti_log('LOGIN: Authenticated user \'' . $db_data['username'] .
 								'\' (' . $db_data['user'] .') using tokenauth ' . $db_data['id'], false, 'TOKENAUTH');
 							$_SESSION['sess_user_id'] = $db_data['user'];
+							$tokenauth_status['Message'] = '';
+							$tokenauth_status['Authentication'] = true;
 						} else {
 							cacti_log('Failed to verify token for auth id ' . $auth_id,false,'TOKENAUTH', POLLER_VERBOSITY_DEBUG);
+							$tokenauth_status['Message'] = 'Bad token';
+							$tokenauth_status['Authentication'] = false;
 						}
 					} else {
 						cacti_log('Failed to load key for auth id ' . $auth_id,false,'TOKENAUTH', POLLER_VERBOSITY_DEBUG);
+						$tokenauth_status['Message'] = 'Bad token';
+						$tokenauth_status['Authentication'] = false;
 					}
 				} else {
 					cacti_log('Failed to find auth id ' . $auth_id,false,'TOKENAUTH', POLLER_VERBOSITY_DEBUG);
+					$tokenauth_status['Message'] = 'Bad token';
+					$tokenauth_status['Authentication'] = false;
 				}
 			}
 		}
@@ -182,4 +195,12 @@ function plugin_tokenauth_auth_alternate_realms() {
 function plugin_tokenauth_sanitize_auth_token($string) {
 	$decoded = base64_decode($string);
 	return $decoded === false ? '' : $string;
+}
+
+function plugin_tokenauth_default_status() {
+	return array(
+		'Session' => isset($_SESSION['sess_user_id']),
+		'Authenticated' => false,
+		'Message' => '',
+	);
 }

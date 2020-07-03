@@ -1,6 +1,6 @@
 [info]
 name = tokenauth
-version = 0.0.2
+version = 0.0.3
 longname = Token Authentication
 author = Mark Brugnoli-Vinten
 email =

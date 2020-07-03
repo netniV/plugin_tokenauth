@@ -109,6 +109,8 @@ echo "http://cacti/?tokenauth_id=$id&tokenauth_token=$signature";
 
 * issue#4: Logging should use appropriate filtering levels
 
+* issue#5: ADd JSON Status for session/auth results
+
 --- 0.0.2 ---
 
 * issue#1: Token size in database too small
